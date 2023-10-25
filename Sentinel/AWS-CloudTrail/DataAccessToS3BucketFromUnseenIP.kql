@@ -1,0 +1,16 @@
+// Detect attempts to view S3 bucket data from IP addresses not seen in the last 30 days
+let Events = dynamic(["GetObject", "HeadObject", "HeadBucket"]);
+let Timeframe = 30d;
+AWSCloudTrail
+| where TimeGenerated > ago(Timeframe) and TimeGenerated < ago(7d)
+| where EventSource == "s3.amazonaws.com" and EventName in (Events)
+| extend IPAddress = SourceIpAddress, UserIdentityUserName = iff(isnotempty(UserIdentityUserName), UserIdentityUserName, tostring(split(UserIdentityArn,'/')[-1]))
+| join kind=leftanti
+    (
+    AWSCloudTrail
+    | where TimeGenerated > ago(7d)
+    | where EventSource == "s3.amazonaws.com" and EventName in (Events)
+    | extend IPAddress = SourceIpAddress, UserIdentityUserName = iff(isnotempty(UserIdentityUserName), UserIdentityUserName, tostring(split(UserIdentityArn,'/')[-1]))
+    )
+    on IPAddress
+| project TimeGenerated, EventName, IPAddress, UserIdentityUserName, UserIdentityArn

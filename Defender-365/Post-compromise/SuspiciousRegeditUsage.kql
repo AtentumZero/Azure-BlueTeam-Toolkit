@@ -1,0 +1,4 @@
+// Searches for the usage of reg or regedit on a Windows device by anyone who is not the user 'system' 
+DeviceProcessEvents
+| where ProcessCommandLine contains "reg"
+| where AccountName != "system"

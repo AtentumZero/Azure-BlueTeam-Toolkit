@@ -1,0 +1,37 @@
+// Detects AWS EKS and ECS creation actions performed by IP addresses not seen performing similar operations in the last 90 days
+// List of events associated with AWS EKS or ECS
+let Events = dynamic([
+    "CreateCluster",
+    "CreateService",
+    "CreateNodegroup",
+    "CreateRepository"
+]);
+// Lists domains used by AWS EKS or ECS
+let Services = dynamic([
+    "ecs.amazonaws.com",
+    "ecr.amazonaws.com"
+]);
+// Lookback timeframe to detect IPs previously seen performing similar actions
+let Lookback = 90d;
+// Timeframe to be excluded from lookback
+let Timeframe = 12h;
+AWSCloudTrail
+| where TimeGenerated > ago(Lookback)
+| where EventSource in (Services) and EventName in (Events)
+| project HistoricalTimeGenerated=TimeGenerated, EventName, SourceIpAddress, EventSource, UserIdentityUserName, UserIdentityAccountId, UserIdentityType, UserAgent, ErrorCode, ErrorMessage, RequestParameters, ResponseElements
+| join kind=inner
+    (
+    AWSCloudTrail
+    | where TimeGenerated > ago(Lookback) and TimeGenerated < ago(Timeframe)
+    | where EventSource in (Services) and EventName in (Events)
+    | where isempty(ErrorCode)
+    | project TimeGenerated, EventName, SourceIpAddress, EventSource, UserIdentityUserName, UserIdentityAccountId, UserIdentityType, UserAgent, ErrorCode, ErrorMessage, RequestParameters, ResponseElements
+    )
+    on SourceIpAddress
+// Excludes results involving IPs that have performed similar actions within the Lookback period and after the Timeframe period
+| where not((TimeGenerated - HistoricalTimeGenerated) between (0min .. Timeframe))
+// Exclude changes made directly from AWS Cloudformation
+| where SourceIpAddress != "cloudformation.amazonaws.com"
+// Excludes unsuccessful attempts as this analytic only focuses on successful container creations
+| where isempty(ErrorCode)
+| project TimeGenerated, EventName, SourceIpAddress, EventSource, UserIdentityUserName, UserIdentityAccountId, UserIdentityType, UserAgent, RequestParameters, ResponseElements

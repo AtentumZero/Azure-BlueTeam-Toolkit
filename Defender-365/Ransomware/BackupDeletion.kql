@@ -1,0 +1,7 @@
+// Identify the use of wmic.exe to delete shadow copy snapshots
+// This is commonly performed by ransomware prior to data encryption
+DeviceProcessEvents
+| where FileName =~ "wmic.exe"
+| where ProcessCommandLine has "shadowcopy" and ProcessCommandLine has "delete"
+| project DeviceId, Timestamp, InitiatingProcessFileName, FileName,
+ProcessCommandLine, InitiatingProcessIntegrityLevel, InitiatingProcessParentFileName

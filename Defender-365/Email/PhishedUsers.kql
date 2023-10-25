@@ -1,0 +1,16 @@
+// Identify devices and user email addresses that have clicked on a link in an email to particular domain
+// Data on how many times the link was clicked by each user and whether the URL was blocked when clicked should also be returned
+let phishingDomain = "example.com"; // Set to a suspicious domain name to search for
+let allowedClicks = DeviceNetworkEvents
+| where RemoteUrl contains phishingDomain
+| distinct DeviceName
+| extend BlockedStatus="No";
+DeviceEvents
+| where ActionType == "BrowserLaunchedToOpenUrl"
+| where RemoteUrl contains phishingDomain
+| extend User=InitiatingProcessAccountUpn
+| summarize Clicks=count() by DeviceName, User
+| join kind=leftouter allowedClicks on DeviceName
+| extend Blocked = iff(BlockedStatus=="", "Yes", "No")
+| project User, Clicks, Blocked, DeviceName
+| sort by Blocked asc, Clicks desc

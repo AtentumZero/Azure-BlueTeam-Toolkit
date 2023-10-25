@@ -1,0 +1,49 @@
+// Detects IAM privilege escalation actions performed by an IP address after creating an IAM policy within a specified timeframe
+// List of monitored actions relating to IAM policy creation
+let Actions = dynamic([
+    "CreatePolicy",
+    "CreatePolicyVersion"
+]);
+// List of monitored actions related to IAM privilege escalation
+let PrivilegeEscalation = dynamic([
+    "AttachGroupPolicy",
+    "AttachRolePolicy",
+    "AttachUserPolicy",
+    "PutGroupPolicy",
+    "PutRolePermissionsBoundary",
+    "PutRolePolicy",
+    "PutUserPermissionsBoundary",
+    "PutUserPolicy"
+]);
+// AWS IAM domain
+let IAM = "iam.amazonaws.com";
+// Timeframe used to detect Privilege Escalation operations performed within the Loopback period following an IAM policy creation
+let Lookback = 8h;
+AWSCloudTrail
+| where TimeGenerated > ago(Lookback)
+| where EventSource == (IAM)
+| where EventName in (PrivilegeEscalation)
+| extend parse_json(RequestParameters) 
+| extend RoleArn = tostring(RequestParameters.roleArn), RoleName = tostring(RequestParameters.roleName), GroupName = tostring(RequestParameters.groupName), PrivEscPolicyName = tostring(RequestParameters.policyName), StaticRequestParameters = tostring(RequestParameters)
+| project TimestampPrivilegeEscalation=TimeGenerated,SourceIpAddress,PrivEscEventSource=EventSource,PrivEscEventTypeName=EventTypeName,PrivEscEventName=EventName,PrivEscUserIdentityType=UserIdentityType,PrivEscUserAgent=UserAgent,PrivEscUserIdentityAccountId=UserIdentityAccountId,PrivEscUserIdentityUserName=UserIdentityUserName,RoleArn,RoleName,GroupName,PrivEscPolicyName,StaticRequestParameters
+| join kind=inner (
+    AWSCloudTrail
+    | where TimeGenerated > ago(Lookback)
+    | where EventSource == (IAM)
+    | where EventName in (Actions)
+    | extend parse_json(RequestParameters) 
+    | extend RoleArn = tostring(RequestParameters.roleArn), RoleName = tostring(RequestParameters.roleName), GroupName = tostring(RequestParameters.groupName), PolicyPolicyName = tostring(RequestParameters.policyName), StaticRequestParameters = tostring(RequestParameters)
+    | project TimestampPolicyCreation=TimeGenerated,SourceIpAddress,PolicyEventSource=EventSource,PolicyEventTypeName=EventTypeName,PolicyEventName=EventName,PolicyUserIdentityType=UserIdentityType,PolicyUserAgent=UserAgent,PolicyUserIdentityAccountId=UserIdentityAccountId,PolicyUserIdentityUserName=UserIdentityUserName,RoleArn,RoleName,GroupName,PolicyPolicyName,StaticRequestParameters
+    )
+    on RoleName,GroupName
+// Exclude changes made directly from AWS SSO
+| where SourceIpAddress != "sso.amazonaws.com"
+// Identifies where a Privilege Escalation operation is performed within the Lookback period of an IAM policy creation
+| where (TimestampPrivilegeEscalation - TimestampPolicyCreation) between (0min .. Lookback)
+| extend RoleInfo = strcat(RoleName,GroupName,RoleArn,RoleName1,GroupName1,RoleArn1) 
+| extend PolicyInfo = strcat(PrivEscPolicyName,PolicyPolicyName) 
+| where notempty(RoleInfo) or notempty(PolicyInfo)
+| project TimestampPolicyCreation,SourceIpAddress,PolicyEventName,PolicyUserIdentityAccountId,TimestampPrivilegeEscalation,PrivEscEventName,PrivEscUserIdentityAccountId,RoleInfo,PolicyInfo,StaticRequestParameters
+|  summarize DuplicateRows=count() by TimestampPolicyCreation,SourceIpAddress,PolicyEventName,PolicyUserIdentityAccountId,TimestampPrivilegeEscalation,PrivEscEventName,PrivEscUserIdentityAccountId,RoleInfo,PolicyInfo,StaticRequestParameters
+// Removes duplicate results
+| where not (DuplicateRows > 1)

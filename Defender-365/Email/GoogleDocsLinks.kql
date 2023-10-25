@@ -1,0 +1,29 @@
+// Identify emails that contain Google Docs links with suspicious keywords in the subject
+// Whitelist of benign email addresses expected to send Google Docs links
+let excludedAddresses = dynamic([
+    "example@example.example"
+]);
+// List of keywords commonly used in the subject line of social engineering emails
+let suspiciousWords = dynamic([
+    "Alert",
+    "Urgent",
+    "Immediately",
+    "Delivery",
+    "Payment",
+    "Payslips",
+    "Money",
+    "Invoice",
+    "New Message",
+    "Verification",
+    "Attention",
+    "Action Required",
+    "Help"
+]);
+EmailEvents
+| where SenderFromAddress !in (excludedAddresses)
+| where Subject has_any (suspiciousWords)
+| join (EmailUrlInfo 
+| where Url startswith "https://docs.google.com/document/") on NetworkMessageId 
+| where EmailDirection == "Inbound"
+| where DeliveryAction == "Delivered"
+| project TimeGenerated, DeliveryAction, DeliveryLocation, EmailDirection, RecipientEmailAddress, SenderDisplayName, SenderFromAddress, SenderIPv4, Subject

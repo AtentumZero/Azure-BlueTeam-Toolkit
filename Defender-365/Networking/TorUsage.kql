@@ -1,0 +1,7 @@
+// Identify active connections associated with Windows executable for the Tor client or the pluggable transport Meek
+// MD5 hashes of files used by Tor will be returned in results, which can be used to block them on a network or system
+// Results will also display how prevalent each file is (by machines) and show examples for some of them (up to 5 machine names per hash)
+DeviceNetworkEvents  
+| where Timestamp < ago(3d) and InitiatingProcessFileName in~ ("tor.exe", "meek-client.exe")
+| summarize MachineCount=dcount(DeviceName), MachineNames=makeset(DeviceName, 5) by InitiatingProcessMD5
+| order by MachineCount desc

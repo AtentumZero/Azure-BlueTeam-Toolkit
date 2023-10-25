@@ -1,0 +1,6 @@
+// Identify attempts to clear at least 10 log entries from event logs using wevtutil on Windows hosts
+DeviceProcessEvents
+| where Timestamp > ago(30d) // Default set to 30 days, set as you see fit
+| where ProcessCommandLine has "WEVTUTIL" and ProcessCommandLine has "CL"
+| summarize LogClearCount = dcount(ProcessCommandLine), ClearedLogList = make_set(ProcessCommandLine) by DeviceId, bin(Timestamp, 5m)
+| where LogClearCount > 10

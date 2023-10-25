@@ -1,0 +1,6 @@
+// Searches for Windows devices that show signs of a command or script not executed by the user 'system' gaining access to the HKLM
+let startTime = now(-30d); // Default is 30 days but set as you see fit
+let endTime = now();
+DeviceProcessEvents
+| where ProcessCommandLine contains "HKLM"
+| where AccountName != "system"

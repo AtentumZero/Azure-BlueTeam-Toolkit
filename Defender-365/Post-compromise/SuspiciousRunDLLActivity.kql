@@ -1,0 +1,8 @@
+// Identify instances where RunDLL32.exe has run a blank command, which is indicative of post-compromise reconnaissance activity
+// commonly used by botnets such as Trickbot.
+DeviceNetworkEvents
+| where InitiatingProcessFileName =~ "rundll32.exe"
+| where InitiatingProcessCommandLine has "rundll32.exe" and InitiatingProcessCommandLine !contains " " // Command-line is intentionally blank 
+and InitiatingProcessCommandLine != "" 
+| summarize DestinationIPCount = dcount(RemoteIP), make_set(RemoteIP), make_set(RemoteUrl), 
+make_set(RemotePort) by InitiatingProcessCommandLine, DeviceId, bin(Timestamp, 5m)

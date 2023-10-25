@@ -5,14 +5,12 @@ These queries are primarily designed for use in the Azure Sentinel and 365 Defen
 
 ### Microsoft Sentinel queries
 * [General](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/General)
-* [Active Directory](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Active-Directory)
-* [Azure Active Directory](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Active-Directory)
-* [Azure Bastion](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Bastion)
+* [Active Directory](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Active-Directory)
+* [Azure Active Directory](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Entra-ID)
 * [Azure Key Vault](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Key-Vault)
-* [Azure Monitor](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Azure-Monitor)
 * [Defender for Endpoint](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Defender-for-Endpoint)
-* [Defender for Identity](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Defender-for-Identity)
 * [Office 365](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/Office-365)
+* [AWS CloudTrail](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Sentinel/AWS-CloudTrail)
 
 ### Defender 365 Advanced Hunting queries
 * [Email](https://github.com/AtentumZero/Azure-BlueTeam-Toolkit/tree/main/Defender-365/Email)

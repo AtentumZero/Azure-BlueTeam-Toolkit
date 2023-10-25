@@ -1,0 +1,5 @@
+// Indentify instances of Office applications attempting to launch a JScript (.jse) file through wscript.exe
+// This type of behaviour is commonly used by malware campaigns that utilise Macro-enabled attachments sent via email
+DeviceProcessEvents 
+| where InitiatingProcessFileName in~('winword.exe', 'excel.exe', 'outlook.exe') 
+| where FileName =~ "wscript.exe" and ProcessCommandLine has ".jse" 

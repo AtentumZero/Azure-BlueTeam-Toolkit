@@ -1,0 +1,25 @@
+// Detects for possible privilege escalation activity via adding IAM policies to users/groups or roles or through amending an IAM policy's permission boundaries
+// List of monitored actions related to IAM privilege escalation
+let PrivilegeEscalation = dynamic([
+    "AttachGroupPolicy",
+    "AttachRolePolicy",
+    "AttachUserPolicy",
+    "PutGroupPolicy",
+    "PutRolePermissionsBoundary",
+    "PutRolePolicy",
+    "PutUserPermissionsBoundary",
+    "PutUserPolicy"
+]);
+// AWS IAM domain
+let IAM = "iam.amazonaws.com";
+AWSCloudTrail
+| where EventSource == (IAM)
+| where EventName in (PrivilegeEscalation)
+| extend parse_json(RequestParameters) 
+| extend RoleArn = tostring(RequestParameters.roleArn), RoleName = tostring(RequestParameters.roleName), GroupName = tostring(RequestParameters.groupName), PolicyName = tostring(RequestParameters.policyName), StaticRequestParameters = tostring(RequestParameters)
+| project TimeGenerated,SourceIpAddress,EventSource,EventTypeName,EventName,UserIdentityType,UserAgent,UserIdentityAccountId,UserIdentityUserName,RoleArn,RoleName,GroupName,PolicyName,StaticRequestParameters
+// Exclude changes made directly from AWS SSO
+| where SourceIpAddress != "sso.amazonaws.com"
+| extend RoleInfo = strcat(RoleName,GroupName,RoleArn) 
+| where notempty(RoleInfo) or notempty(PolicyName)
+| project TimeGenerated,SourceIpAddress,EventName,UserIdentityAccountId,RoleInfo,PolicyName,StaticRequestParameters

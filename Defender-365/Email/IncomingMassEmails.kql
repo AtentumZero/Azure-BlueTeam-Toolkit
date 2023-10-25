@@ -1,0 +1,7 @@
+// Identify incoming emails with over 50 recipients 
+EmailEvents
+| where SenderFromDomain != "example.com" // Enter your domain for exclusion to reduce false positives 
+| summarize Recipients = dcount(RecipientEmailAddress) by SenderFromAddress, Subject, AttachmentCount, NetworkMessageId, SendTime = Timestamp
+| where Recipients > 50
+| project-reorder Recipients, Subject
+| sort by SendTime desc

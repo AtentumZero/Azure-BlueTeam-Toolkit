@@ -1,0 +1,17 @@
+// Identify network events linked to the 100 least prevalent domains (FQDN) that have a populated RemoteURL column
+// This is useful for identifying domains that may only be communicating sporadically or communicating with a small number of devices
+// Randomly generated domains such as dqwwdsdyaab.xyz are a good example of what would count as suspicious in the results
+// C&C servers commonly use domains of this nature and aim to communicate to networks/devices infrequently to avoid detection
+DeviceNetworkEvents
+| where Timestamp > ago(12h) // Default lookback is 12 hours, amend as required 
+| where InitiatingProcessFileName !in~ ('iexplore.exe','chrome.exe','opera.exe','safari.exe') // Remove web browser traffic
+    and isnotempty(RemoteUrl)
+| extend FQDN = iff(RemoteUrl matches regex "^([a-zA-Z0-9._-])+$", tostring(RemoteUrl), parse_url(RemoteUrl).domain)
+| top-nested 100 of FQDN by dcount(DeviceId) asc
+| join kind=inner (
+    DeviceNetworkEvents
+    | where Timestamp > ago(1h)
+    | where isnotempty(RemoteUrl)
+    | extend FQDN = iff(RemoteUrl matches regex "^([a-zA-Z0-9._-])+$", tostring(RemoteUrl), parse_url(RemoteUrl).domain)
+) on FQDN
+| order by aggregated_FQDN asc

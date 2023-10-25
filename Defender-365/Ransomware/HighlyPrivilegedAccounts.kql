@@ -1,0 +1,7 @@
+// Identify highly privileged accounts that are commonly targetted by Ransomware prior to performing encryption activity
+DeviceProcessEvents
+| where FileName == "net.exe"
+| summarize makeset(ProcessCommandLine) by InitiatingProcessFileName, AccountName, DeviceId, bin(Timestamp, 5m)
+| where (set_ProcessCommandLine has "admin" 
+and set_ProcessCommandLine has_any("domain", "enterprise", "backup operators"))
+and set_ProcessCommandLine has "group" and set_ProcessCommandLine contains "/do"

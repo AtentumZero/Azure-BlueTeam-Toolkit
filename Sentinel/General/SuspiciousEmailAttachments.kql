@@ -1,0 +1,48 @@
+// Identify suspicious file types sent or received as email attachments
+let suspiciousFileTypes = dynamic([
+	"exe",		// Windows executable
+	"pif", 		// MS-DOS program information file
+	"application",	// Microsoft ClickOnce application installer
+	"gadget",	// Windows Vista & 7 desktop gadget file 
+	"msi", 		// Microsoft installer file
+	"msp", 		// Windows installer patch file
+	"com", 		// MS-DOS application file
+	"scr", 		// Windows screen saver file
+	"hta", 		// HTML application that bypassed sandboxing
+	"cpl", 		// Windows control panel file
+	"msc",		// Microsoft management console file
+	"jar",		// Java executable file
+	"bat",		// Batch file used in Windows & MS-DOS
+	"cmd",		// Batch file used in Windows & MS-DOS
+	"vb",		// VBScript executable file
+	"vbs",		// VBScript executable file
+	"vbe",		// Encrypted VBScript executable file
+	"js",		// Javascript executable file
+	"jse",		// Encrypted Javascript executable file
+	"ws",		// Windows script file
+	"wsf",		// Windows script file
+	"wsc",		// Windows script component and host control file
+	"wsh",		// Windows script component and host control file
+	"ps1",		// Windows Powershell script
+	"ps1xml",	// Windows Powershell script
+	"ps2",		// Windows Powershell script
+	"ps2xml",	// Windows Powershell script
+	"psc1",		// Windows Powershell script
+	"psc2",		// Windows Powershell script
+	"msh",		// Windows Monad script (Powershell predecessor)
+	"msh1",		// Windows Monad script (Powershell predecessor)
+	"msh2",		// Windows Monad script (Powershell predecessor)
+	"msh1xml",	// Windows Monad script (Powershell predecessor)
+	"ms2xml",	// Windows Monad script (Powershell predecessor)
+	"lnk",		// Windows local program link
+	"reg",		// Windows registry file
+	"dll",          // Windows Dynamic Link Library (DLL) file
+	"pyd"           // Windows DLL written in Python
+	"py",           // Python script
+	"pyc",          // Compiled Python bytecode
+	"pyo",          // Deprecated optimised Python file
+	"jnlp"	  	// Java Network Launch Protocol file
+]);
+EmailAttachmentInfo 
+| where FileType in (suspiciousFileTypes) and isnotempty(FileType)
+| project TimeGenerated, FileName, FileType, RecipientEmailAddress, SenderFromAddress, SHA256

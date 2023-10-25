@@ -1,0 +1,18 @@
+// Detects Logic App run failures
+// List of unsuccessful RunStatus codes
+let FailureStatus = dynamic([
+    "Aborted",
+    "Cancelled",
+    "Failed",
+    "Skipped",
+    "Timed out"
+]);
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.LOGIC"
+| where Category == "WorkflowRuntime"
+| extend RunStatus = status_s, WorkflowName = resource_workflowName_s, WorkflowAction = resource_actionName_s, ErrorCode = code_s, ErrorMessage = error_message_s
+| where RunStatus in (FailureStatus)
+| extend ErrorCode = iff(ErrorCode == "", "N/A", ErrorCode),
+         ErrorMessage = iff(ErrorMessage == "", "N/A", ErrorMessage),
+         WorkflowAction = iff(WorkflowAction == "", "N/A", WorkflowAction)
+| project TimeGenerated, Category, ResourceGroup, ResourceProvider, ResourceType, OperationName, RunStatus, WorkflowName, WorkflowAction, ErrorCode, ErrorMessage

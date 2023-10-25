@@ -1,0 +1,46 @@
+// Detect mass file transfers to unexpected AWS resources
+// List of AWS resources expected to make mass data transfers
+let ExpectedResources = dynamic([
+    "cloudtrail.amazonaws.com",
+    "s3.amazonaws.com",
+    "glacier.amazonaws.com",
+    "elasticfilesystem.amazonaws.com",
+    "elasticache.amazonaws.com",
+    "dynamodb.amazonaws.com",
+    "memorydb.amazonaws.com",
+    "rds.amazonaws.com"
+]);
+// List of AWS operations associated with data transfers
+let Events = dynamic([
+    "CompleteMultipartUpload",
+    "CreateMultipartUpload",
+    "GetObject",
+    "PutObject",
+    "CopyObject",
+    "RestoreObject",
+    "UploadPart",
+    "UploadPartCopy"
+]);
+// Threshold for data transfers seen within the Timeframe
+let Threshold = 100;
+// Timeframe used to detect data transfers over the Threshold limit
+let Timeframe = 1d;
+AWSCloudTrail
+| where TimeGenerated > ago(Timeframe)
+| where EventName in (Events)
+| extend d=parse_json(RequestParameters) 
+| mv-apply d on (
+    project BucketName = tostring(d.bucketName)
+)
+| extend d=parse_json(RequestParameters) 
+| mv-apply d on (
+    project Host = tostring(d.Host)
+)
+| summarize count() by bin(TimeGenerated, 1h), EventName, BucketName, Host, SourceIpAddress, EventSource, RecipientAccountId, UserAgent
+| where count_ > (Threshold)
+| extend RequestCount=count_
+// Removes duplicates added into results by parse_json
+| where notempty (BucketName) and notempty (Host)
+// Excludes expected AWS resources based on user-agent or SourceIpAddress, which is the same for most AWS services
+| where not (SourceIpAddress has_any (ExpectedResources)) or not (UserAgent has_any (ExpectedResources))
+| project TimeGenerated, EventName, BucketName, Host, SourceIpAddress, EventSource, RecipientAccountId, UserAgent, RequestCount
