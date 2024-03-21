@@ -1,0 +1,22 @@
+// Detects when files are copied, created or moved onto a mounted USB drive
+// Below section detects when a USB drive is mounted
+let UsbDriveMount = DeviceEvents
+    | where ActionType=="UsbDriveMounted"
+    | extend ParsedFields=parse_json(AdditionalFields)
+    | project DeviceId, DeviceName, DriveLetter=ParsedFields.DriveLetter, MountTime=Timestamp, ProductName=ParsedFields.ProductName,SerialNumber=ParsedFields.SerialNumber,Manufacturer=ParsedFields.Manufacturer
+    | order by DeviceId asc, MountTime desc;
+// Detects when a file is created on a mount other than the C drive
+let FileCreation = DeviceFileEvents
+    | where InitiatingProcessAccountName != "system"
+    | where ActionType == "FileCreated"
+    | where FolderPath !startswith "C:\\"
+    | where FolderPath !startswith "\\"
+    | project ReportId,DeviceId,InitiatingProcessAccountDomain, InitiatingProcessAccountName,InitiatingProcessAccountUpn, FileName, FolderPath, SHA256, Timestamp, SensitivityLabel, IsAzureInfoProtectionApplied
+    | order by DeviceId asc, Timestamp desc;
+// Pulls back results only where 'UsbDriveMounted' aligns with the mount where a file creation was detected
+FileCreation 
+    | lookup kind=inner (UsbDriveMount) on DeviceId
+    | where FolderPath startswith DriveLetter
+    | where Timestamp >= MountTime
+    | partition by ReportId ( top 1 by MountTime )
+    | order by DeviceId asc, Timestamp desc
