@@ -55,4 +55,6 @@ DeviceProcessEvents
 | where not (FileName endswith ".scr" and (InitiatingProcessFileName contains "winlogon.exe" or InitiatingProcessFileName == "explorer.exe"))
 // Exclude the COMs CHCP, More & Mode when executed directly by CMD or Powershell
 | where not (FileName has_any (COMs) and (InitiatingProcessFileName contains "cmd.exe" or InitiatingProcessFileName == "powershell.exe" or InitiatingProcessFileName == "pwsh.exe"))
+// Excludes .exe files as they may crop up in results where an extension filetype is in the name of the executable - e.g. file.msi.exec & file.application.exec
+| where FileName !endswith ".exe"
 | project Timestamp, FileName, FolderPath, AccountName, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine
