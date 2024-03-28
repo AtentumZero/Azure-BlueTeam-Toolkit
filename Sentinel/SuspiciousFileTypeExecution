@@ -1,0 +1,58 @@
+// Detects the execution of Windows processes with file types commonly used in offensive attacks
+let SuspiciousExtensions = dynamic([
+    ".pyo", // Deprecated optimised Python file
+    ".vbe", // Encrypted VBScript executable file
+    ".msp", // Windows installer patch file
+    ".cmd", // Batch file used in Windows & MS-DOS
+    ".msi", // Microsoft installer file
+    ".ps2", // Windows Powershell script
+    ".jnlp", // Java Network Launch Protocol file
+    ".bat", // Batch file used in Windows & MS-DOS
+    ".vb", // VBScript executable file
+    ".com", // MS-DOS application file
+    ".ms2xml", // Windows Monad script (Powershell predecessor)
+    ".dll", // Windows Dynamic Link Library (DLL) file
+    ".scr", // Windows screen saver file
+    ".ps2xml", // Windows Powershell script
+    ".pif", // MS-DOS program information file
+    ".ws", // Windows script file
+    ".application", // Microsoft ClickOnce application installer
+    ".pyd", // Windows DLL written in Python
+    ".msh1", // Windows Monad script (Powershell predecessor)
+    ".wsh", // Windows script component and host control file
+    ".jar", // Java executable file
+    ".msh2", // Windows Monad script (Powershell predecessor)
+    ".hta", // HTML application that bypassed sandboxing
+    ".cpl", // Windows control panel file
+    ".psc1", // Windows Powershell script
+    ".py", // Python script
+    ".vbs", // VBScript executable file
+    ".xll", // Excel add-in file
+    ".msc", // Microsoft management console file
+    ".jse", // Encrypted Javascript executable file
+    ".gadget", // Windows Vista & 7 desktop gadget file 
+    ".reg", // Windows registry file
+    ".msh1xml", // Windows Monad script (Powershell predecessor)
+    ".wsc", // Windows script component and host control file
+    ".lnk", // Windows local program link
+    ".ps1xml", // Windows Powershell script
+    ".js", // Javascript executable file
+    ".ps1", // Windows Powershell script
+    ".pyc", // Compiled Python bytecode
+    ".psc2", // Windows Powershell script
+    ".wsf", // Windows script file
+    ".msh" // Windows Monad script (Powershell predecessor)
+]);
+let COMs = dynamic([
+    "chcp.com",
+    "more.com",
+    "mode.com",
+    "tree.com"
+]);
+DeviceProcessEvents
+| where FileName has_any (SuspiciousExtensions) and isnotempty(FileName)
+// Excludes Screensaver files executed by WinLogon.exe or Explorer.exe
+| where not (FileName endswith ".scr" and (InitiatingProcessFileName contains "winlogon.exe" or InitiatingProcessFileName == "explorer.exe"))
+// Exclude the COMs CHCP, More & Mode when executed directly by CMD or Powershell
+| where not (FileName has_any (COMs) and (InitiatingProcessFileName contains "cmd.exe" or InitiatingProcessFileName == "powershell.exe" or InitiatingProcessFileName == "pwsh.exe"))
+| project Timestamp, FileName, FolderPath, AccountName, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine
