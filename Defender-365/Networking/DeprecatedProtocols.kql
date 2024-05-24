@@ -1,0 +1,27 @@
+// Detects the use of deprecated communication protocols such as FTP & Telnet
+let Ports = dynamic([
+    "21",  // FTP
+    "23",  // Telnet
+    "69",  // TFTP
+    "512", // rexec
+    "513", // rlogin/rwho/ruptime
+    "514"  // rsh/rcp
+]);
+DeviceNetworkEvents
+| where ActionType == "ConnectionSuccess"
+| where LocalIPType == "Private"
+// Looks for ports listed in Ports table
+| where RemotePort in (Ports)
+// Adds protocol names into the ProtocolType column
+| extend FTP = iff((RemotePort in (21)), "FTP", "")
+| extend Telnet = iff((RemotePort in (23)), "Telnet", "")
+| extend TFTP = iff((RemotePort in (69)), "TFTP", "")
+| extend rexec = iff((RemotePort in (512)), "rexec", "")
+| extend rlogin = iff((RemotePort in (513)), "rlogin/rwho/ruptime", "")
+| extend rcp = iff((RemotePort in (514)), "rsh/rcp", "")
+| extend ['FTPTelnetMerge']=strcat ((FTP), Telnet)
+| extend ['TFTPrexecMerge']=strcat ((TFTP), rexec)
+| extend ['rloginrcpMerge']=strcat ((rlogin), rcp)
+| extend ['FTPTFTPMerge']=strcat ((FTPTelnetMerge), TFTPrexecMerge)
+| extend ['ProtocolType']=strcat ((FTPTFTPMerge), rloginrcpMerge)
+| project TimeGenerated, DeviceName, ProtocolType, LocalIP, RemoteIP, RemotePort, RemoteUrl
